@@ -1,8 +1,8 @@
-import { generatePassword as gp } from './core.ts';
+import { generateUUID as gu } from './core.ts';
 import toast from "./toast.js";
 
-export function generatePassword(config) {
-  return gp(config);
+export function generateUUID() {
+  return gu();
 }
 
 export function createToast() {
