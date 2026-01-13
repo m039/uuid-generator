@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Генератор паролей</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
+  <link rel="stylesheet" href="https://use.fontawesome.com/releases/v6.5.0/css/all.css">
+  <style>
+    .klever-toasts-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding: 10px;
+    }
+
+    /* Анимация появления/скрытия */
+    .klever-toast {
+      opacity: 0;
+      transform: translateX(100%);
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .klever-toast.is-showing {
+      opacity: 1;
+      transform: translateX(0);
+    }
+</style>
+</head>
+
+<body>
+  <div id="klever-toasts" class="klever-toasts-container">
+  </div>
+  <section class="section">
+    <div class="container">
+      <div class="columns is-centered">
+        <div class="column is-8-tablet is-6-desktop is-5-widescreen">
+          <article class="message is-info">
+            <div class="message-header">
+              <p>Генератор паролей</p>
+            </div>
+            <div class="message-body">
+              Создайте безопасный пароль за пару секунд.
+            </div>
+          </article>
+
+          <div class="box mt-4">
+            <!-- Поле вывода пароля -->
+            <div class="field">
+              <label class="label">Ваш новый пароль</label>
+              <div class="field has-addons">
+                <div class="control has-icons-left is-expanded">
+                  <input id="passwordOutput" class="input is-large" type="text" placeholder="Нажмите «Сгенерировать»">
+                  <span class="icon is-small is-left">
+                    <i class="fas fa-key"></i>
+                  </span>
+                </div>
+                <div class="control">
+                  <button id="copyPassword" class="button is-large is-primary is-outlined" title="Копировать пароль">
+                    <i class="fas fa-clipboard"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Настройки генерации -->
+            <hr>
+
+            <div class="field">
+              <label class="label">Длина пароля</label>
+              <div class="control">
+                <input id="passwordLength" class="input" type="number" value="12" min="8" max="64">
+              </div>
+            </div>
+
+            <div class="field">
+              <label class="label">Включить символы</label>
+              <div class="control">
+                <label class="checkbox">
+                  <input type="checkbox" id="includeSymbols" checked>
+                  !@#$%^&*
+                </label>
+              </div>
+              <div class="control mt-2">
+                <label class="checkbox">
+                  <input type="checkbox" id="includeNumbers" checked>
+                  Цифры (0–9)
+                </label>
+              </div>
+              <div class="control mt-2">
+                <label class="checkbox">
+                  <input type="checkbox" id="includeLowercase" checked>
+                  Строчные буквы (a–z)
+                </label>
+              </div>
+              <div class="control mt-2">
+                <label class="checkbox">
+                  <input type="checkbox" id="includeUppercase" checked>
+                  Прописные буквы (A–Z)
+                </label>
+              </div>
+            </div>
+
+            <div class="field pt-4">
+              <div class="control">
+                <button id="generateBtn" class="button is-success is-large is-fullwidth" title="Сгенерировать пароль">
+                  Сгенерировать
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script type="module">
+    import {generatePassword, createToast} from "./uuid-generator.js";
+
+    const passwordLength = document.getElementById('passwordLength');
+    const includeSymbols = document.getElementById('includeSymbols');
+    const includeNumbers = document.getElementById('includeNumbers');
+    const includeLowercase = document.getElementById('includeLowercase');
+    const includeUppercase = document.getElementById('includeUppercase');
+
+    function generateBtnClick(silent) {
+      let password = generatePassword({ 
+        passwordLength: passwordLength.value, 
+        includeSymbols: includeSymbols.checked, 
+        includeNumbers: includeNumbers.checked,
+        includeLowercase: includeLowercase.checked,
+        includeUppercase: includeUppercase.checked
+      });
+
+      if (password.message != undefined) {
+        if (!silent) {
+          createToast().show(password.message, "is-danger");
+        }
+      } else {
+        document.getElementById('passwordOutput').value = password;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const checkboxes = [includeSymbols, includeNumbers, includeLowercase, includeUppercase];
+      const inputs = [passwordLength];
+      const prefix = "password-generator.";
+
+      // 1. Восстановление состояния при загрузке
+      function restoreCheckboxStates() {
+        checkboxes.forEach(cb => {
+          const savedState = localStorage.getItem(prefix + cb.id);
+          if (savedState !== null) {
+            cb.checked = savedState === 'true';
+          }
+        });
+      }
+
+      function restoreInputValues() {
+        inputs.forEach(input => {
+          const savedValue = localStorage.getItem(prefix + input.id);
+          if (savedValue !== null) {
+            input.value = savedValue;
+          }
+        });
+      }
+
+      // 2. Сохранение состояния при изменении
+      function saveCheckboxState(event) {
+        const checkbox = event.target;
+        localStorage.setItem(prefix + checkbox.id, checkbox.checked);
+      }
+
+      function saveInputValue(event) {
+        const input = event.target;
+        localStorage.setItem(prefix + input.id, input.value);
+      }
+
+      // Подключаем обработчики
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', saveCheckboxState);
+      });
+
+      // Подключаем обработчики
+      inputs.forEach(input => {
+        // Сохраняем при каждом изменении (input, change, blur)
+        input.addEventListener('input', saveInputValue);
+        input.addEventListener('change', saveInputValue);
+        input.addEventListener('blur', saveInputValue);
+      });
+
+      // Восстанавливаем состояние
+      restoreCheckboxStates();
+      restoreInputValues();
+
+      generateBtnClick(true);
+    });
+
+    document.getElementById('copyPassword').addEventListener('click', () => {
+      const passwordField = document.getElementById('passwordOutput');
+      passwordField.select();
+      document.execCommand('copy');
+      createToast().show('Пароль скопирован в буфер обмена!', "is-info");
+    });
+
+    document.getElementById('generateBtn').addEventListener('click', () => generateBtnClick(false));
+  </script>
+</body>
+</html>
